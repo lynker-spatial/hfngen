@@ -23,7 +23,7 @@
 #'   Defaults to a CONUS path.
 #' @param IMP Character. Path to a raster for impervious fraction used for
 #'   zonal mean.
-#' @param GW Character. Path to a parquet dataset with groundwater attributes,
+#' @param GW DuckDB connection via `hfutils::tbl_http()` with groundwater attributes,
 #'   expected to include columns `ComID` and `Zmax`.
 #'
 #' @return A tibble with one row per `divide_id` containing:
@@ -63,17 +63,17 @@
 #' @export
 
 
-minimal_div_attts = function(
+minimal_div_atts = function(
     gpkg,
     ISLTYP = 'gridded/nwm/CONUS/ISLTYP.tif',
     IVGTYP = 'gridded/nwm/CONUS/IVGTYP.tif',
     IMP    = 'gridded/nwm/CONUS/derived/CONUS_imp_240.tif',
     GW     = 'tabular/nwm_gw_basins.parquet'){
 
-  geom = as_ogr(gpkg, 'divides') |>
+  geom <- as_ogr(gpkg, 'divides') |>
     st_as_sf()
 
-  nwm = suppressWarnings({
+  nwm <-  suppressWarnings({
     zonal::execute_zonal(rast(c(ISLTYP, IVGTYP)),
                          geom,
                          fun = 'mode',
@@ -82,7 +82,7 @@ minimal_div_attts = function(
       setNames(c("divide_id", "mode.ISLTYP", "mode.IVGTYP"))
   })
 
-  imp =  suppressWarnings({
+  imp <-   suppressWarnings({
     zonal::execute_zonal(rast(IMP),
                          geom,
                          fun = 'mean',
@@ -91,11 +91,11 @@ minimal_div_attts = function(
       setNames(c("divide_id", "mean.impervious"))
   })
 
-  zmax_data = arrow::open_dataset(GW) |>
+  zmax_data <-  GW |>
     select(ComID, Zmax) |>
     collect()
 
-  zmax = as_ogr(gpkg, 'network') |>
+  zmax <-  as_ogr(gpkg, 'network') |>
     select(divide_id, incremental_area_id, areasqkm, incremental_areasqkm, reference_id) |>
     distinct() |>
     collect() |>

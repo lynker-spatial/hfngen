@@ -6,7 +6,7 @@
 \usage{
 calculate_flow_atts(
   network,
-  attribute_path,
+  hydraulics,
   hf_id = "flowline_id",
   attribute_cols = c("owp_y_bf", "owp_tw_bf", "bf_area", "owp_roughness_bathy", "slope"),
   weight_col = "lengthkm"
@@ -22,14 +22,6 @@ calculate_flow_atts(
 This is typically the \code{network} layer produced by your NextGen build.
 }}
 
-\item{attribute_path}{Character path or URI to an \strong{Arrow}-readable dataset
-(e.g., a directory of Parquet files). The dataset must include:
-\itemize{
-\item \code{feature_id} (will be mapped to \code{reference_id}),
-\item the columns listed in \code{attribute_cols},
-\item the weighting column named in \code{weight_col}.
-}}
-
 \item{hf_id}{Character name of the network flow identifier column to group by.
 Defaults to \code{"flowline_id"}. Must be present in \code{network}.}
 
@@ -40,6 +32,13 @@ These are averaged with a length-weighted mean.}
 
 \item{weight_col}{Character name of the length-based weighting column present
 in the Arrow dataset. Defaults to \code{"lengthkm"}.}
+
+\item{hydraulics_path}{DuckDB connection via \code{hfutils::tbl_http()}
+\itemize{
+\item \code{feature_id} (will be mapped to \code{reference_id}),
+\item the columns listed in \code{attribute_cols},
+\item the weighting column named in \code{weight_col}.
+}}
 }
 \value{
 A tibble with one row per \code{hf_id} containing:

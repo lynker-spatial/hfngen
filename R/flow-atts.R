@@ -13,8 +13,7 @@
 #'   - and (optionally) other columns used downstream.
 #'   This is typically the `network` layer produced by your NextGen build.
 #'
-#' @param attribute_path Character path or URI to an **Arrow**-readable dataset
-#'   (e.g., a directory of Parquet files). The dataset must include:
+#' @param hydraulics_path DuckDB connection via `hfutils::tbl_http()`
 #'   - `feature_id` (will be mapped to `reference_id`),
 #'   - the columns listed in `attribute_cols`,
 #'   - the weighting column named in `weight_col`.
@@ -68,13 +67,13 @@
 #' @export
 
 calculate_flow_atts <- function(network,
-                                attribute_path,
+                                hydraulics,
                                 hf_id = "flowline_id",
                                 attribute_cols = c('owp_y_bf', 'owp_tw_bf','bf_area',
                                                    'owp_roughness_bathy','slope'),
                                 weight_col = 'lengthkm') {
 
-  map <- arrow::open_dataset(attribute_path) |>
+  map <- hydraulics |>
     dplyr::select(reference_id = feature_id,
                   all_of(attribute_cols),
                   small_w = all_of(weight_col)) |>
