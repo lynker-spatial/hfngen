@@ -22,5 +22,5 @@ Imports:
     tidyr,
     zonal
 Remotes:
-    lynker-spatial/hfutils
+    lynker-spatial/hfutils,
     mikejohnson51/zonal
