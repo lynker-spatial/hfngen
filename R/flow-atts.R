@@ -77,7 +77,7 @@ calculate_flow_atts <- function(network,
     dplyr::select(reference_id = feature_id,
                   all_of(attribute_cols),
                   small_w = all_of(weight_col)) |>
-    dplyr::filter(reference_id %in%  unique(network$reference_id)) |>
+    dplyr::filter(reference_id %in%  !!unique(network$reference_id)) |>
     dplyr::collect()
 
  idx <- dplyr::select(network, reference_id, hl_class, hl_reference, all_of(hf_id)) |>
