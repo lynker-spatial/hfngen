@@ -53,7 +53,7 @@
 #' dplyr::glimpse(out)
 #' }
 #' @importFrom hfutils as_ogr st_as_sf
-#' @importFrom terra rast
+#' @importFrom terra rast crs
 #' @importFrom dplyr select distinct collect left_join group_by summarize across mutate
 #' @importFrom tibble as_tibble
 #' @importFrom powerjoin power_full_join
@@ -73,18 +73,34 @@ minimal_div_atts = function(
   geom <- as_ogr(gpkg, 'divides') |>
     st_as_sf()
 
+  align_geom_to_raster <- function(geom_sf, raster_obj) {
+    rast_crs <- terra::crs(raster_obj, proj = TRUE)
+    geom_crs <- sf::st_crs(geom_sf)$wkt
+
+    if (!is.na(rast_crs) && !is.na(geom_crs) && rast_crs != geom_crs) {
+      return(sf::st_transform(geom_sf, rast_crs))
+    }
+    geom_sf
+  }
+
+  soil_veg_rast <- rast(c(ISLTYP, IVGTYP))
+  geom_soil     <- align_geom_to_raster(geom, soil_veg_rast)
+
   nwm <-  suppressWarnings({
-    zonal::execute_zonal(rast(c(ISLTYP, IVGTYP)),
-                         geom,
+    zonal::execute_zonal(soil_veg_rast,
+                         geom_soil,
                          fun = 'mode',
                          ID = "divide_id",
                          join = FALSE) |>
       setNames(c("divide_id", "mode.ISLTYP", "mode.IVGTYP"))
   })
 
+  imp_rast <- rast(IMP)
+  geom_imp <- align_geom_to_raster(geom, imp_rast)
+
   imp <-   suppressWarnings({
-    zonal::execute_zonal(rast(IMP),
-                         geom,
+    zonal::execute_zonal(imp_rast,
+                         geom_imp,
                          fun = 'mean',
                          ID = "divide_id",
                          join = FALSE) |>
@@ -110,8 +126,6 @@ minimal_div_atts = function(
   powerjoin::power_full_join(list(nwm, imp, zmax), by = 'divide_id') |>
     tibble::as_tibble()
 }
-
-
 
 
 

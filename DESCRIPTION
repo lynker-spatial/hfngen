@@ -3,6 +3,8 @@ Title: Generate NextGen Ready Hydrofabrics
 Version: 0.1
 Authors@R: 
     person("Mike", "Johnson", , "mjohnson@lynker.com", role = c("aut", "cre"))
+Author: Mike Johnson [aut, cre]
+Maintainer: Mike Johnson <mjohnson@lynker.com>
 Description: Generate NextGen Ready Hydrofabrics
 License: Apache License (>= 2)
 Encoding: UTF-8

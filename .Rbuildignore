@@ -1,3 +1,5 @@
-^LICENSE\.md$
-^.*\.Rproj$
+^\.git$
+^\.gitignore$
 ^\.Rproj\.user$
+^hfngen\.Rproj$
+^README\.Rmd$

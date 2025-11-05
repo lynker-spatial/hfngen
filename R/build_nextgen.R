@@ -42,7 +42,7 @@
 #' }
 #'
 #' @importFrom sf st_drop_geometry st_as_sf st_coordinates st_intersects
-#' @importFrom dplyr select filter mutate arrange distinct group_by ungroup left_join bind_cols bind_rows if_else full_join
+#' @importFrom dplyr select filter mutate arrange distinct group_by ungroup left_join right_join bind_cols bind_rows if_else full_join
 #' @importFrom tidyr separate_longer_delim
 #' @importFrom cli cli_alert_success cli_alert
 #' @importFrom hfutils read_hydrofabric write_hydrofabric layer_exists get_node node_geometry
@@ -185,14 +185,14 @@ build_nextgen = function(flowpath_gpkg,
   }
 
   if(hfutils::layer_exists(flowpath_gpkg, "pois")){
-    ngen_network_list$pois = read_sf(flowpath_gpkg, "pois") |>
+    ngen_network_list$pois = sf::read_sf(flowpath_gpkg, "pois") |>
       select(poi_id, flowpath_id) |>
       mutate(
         flowpath_id = if_else(is.na(flowpath_id), NA, paste0(flowpath_prefix, flowpath_id))
       )
   }
 
-    net <- read_sf(flowpath_gpkg, "network") |>
+    net <- sf::read_sf(flowpath_gpkg, "network") |>
       select(flowpath_id, reference_id = hf_id) |>
       mutate(
         flowpath_id = if_else(is.na(flowpath_id), NA, paste0(flowpath_prefix, flowpath_id)),
@@ -212,7 +212,7 @@ build_nextgen = function(flowpath_gpkg,
         st_drop_geometry() |>
         dplyr::right_join(net, by = "flowline_id", relationship = "many-to-many")
 
-      net <- read_sf(flowline_gpkg, 'hydrolocations') |>
+      net <- sf::read_sf(flowline_gpkg, 'hydrolocations') |>
         select(any_of(c('poi_id', 'hl_reference', 'hl_class', 'hl_source', 'hl_uri'))) |>
         distinct() |>
         st_drop_geometry() |>

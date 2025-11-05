@@ -13,8 +13,9 @@
 #'   - and (optionally) other columns used downstream.
 #'   This is typically the `network` layer produced by your NextGen build.
 #'
-#' @param hydraulics_path DuckDB connection via `hfutils::tbl_http()`
-#'   - `feature_id` (will be mapped to `reference_id`),
+#' @param hydraulics Arrow dataset or DuckDB/DBI table (e.g., via
+#'   `hfutils::tbl_http()`) containing:
+#'   - `feature_id` (mapped to `reference_id`),
 #'   - the columns listed in `attribute_cols`,
 #'   - the weighting column named in `weight_col`.
 #'
@@ -53,11 +54,11 @@
 #' net <- readr::read_csv("network.csv")
 #'
 #' atts <- calculate_flow_atts(
-#'   network        = net,
-#'   attribute_path = attr_path,
-#'   hf_id          = "flowline_id",
+#'   network     = net,
+#'   hydraulics  = arrow::open_dataset(attr_path),
+#'   hf_id       = "flowline_id",
 #'   attribute_cols = c("owp_y_bf","owp_tw_bf","bf_area","owp_roughness_bathy","slope"),
-#'   weight_col     = "lengthkm"
+#'   weight_col  = "lengthkm"
 #' )
 #' }
 #'
@@ -75,12 +76,12 @@ calculate_flow_atts <- function(network,
 
   map <- hydraulics |>
     dplyr::select(reference_id = feature_id,
-                  all_of(attribute_cols),
-                  small_w = all_of(weight_col)) |>
-    dplyr::filter(reference_id %in%  !!unique(network$reference_id)) |>
+                  dplyr::all_of(attribute_cols),
+                  small_w = dplyr::all_of(weight_col)) |>
+    dplyr::filter(reference_id %in% unique(network$reference_id)) |>
     dplyr::collect()
 
- idx <- dplyr::select(network, reference_id, hl_class, hl_reference, all_of(hf_id)) |>
+ idx <- dplyr::select(network, reference_id, hl_class, hl_reference, dplyr::all_of(hf_id)) |>
     dplyr::mutate(hl_reference = ifelse(hl_class == 'gage', hl_reference, NA)) |>
     dplyr::select(-hl_class) |>
     dplyr::distinct() |>
@@ -99,7 +100,7 @@ calculate_flow_atts <- function(network,
       Bw = ifelse(Bw <= 0, .1, Bw)
     ) |>
     dplyr::select(
-      all_of(hf_id),
+      dplyr::all_of(hf_id),
       n = owp_roughness_bathy,
       Tw = owp_tw_bf,
       Bw,
@@ -129,11 +130,14 @@ calculate_flow_atts <- function(network,
            hl_reference,
            MusX, MusK)
 
- dplyr::select(network, dplyr::all_of(hf_id), lengthkm = !!gsub("id", "lengthkm", hf_id)) |>
+ length_column <- gsub("id", "lengthkm", hf_id)
+
+ dplyr::select(network,
+               dplyr::all_of(hf_id),
+               lengthkm = dplyr::all_of(length_column)) |>
    dplyr::distinct() |>
    dplyr::mutate(lengthm = lengthkm * 1000, lengthkm = NULL) |>
    dplyr::right_join(idx, by = hf_id)
 
 
 }
-
