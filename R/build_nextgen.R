@@ -74,6 +74,7 @@ build_nextgen = function(flowpath_gpkg,
                          areasqkm,
                          hydroseq)
 
+
   fp_term_net  <- filter(fp_net, flowpath_toid == 0 | flowpath_toid >= term_add)
 
   terms <- filter(fp_net, flowpath_id %in% fp_term_net$flowpath_id)
@@ -110,7 +111,7 @@ build_nextgen = function(flowpath_gpkg,
     dplyr::arrange(flowpath_toid, -hs) |>
     distinct(flowpath_toid, .keep_all = TRUE)
 
-  topo =filter(topo, flag != TRUE) |>
+  topo = filter(topo, flag != TRUE) |>
     dplyr::arrange(flowpath_toid,
                    desc(tofrom),
                    desc(hs)) |>
@@ -142,14 +143,21 @@ build_nextgen = function(flowpath_gpkg,
            flowpath_toid = NULL) |>
     left_join(st_drop_geometry(  ngen_network_list$flowpaths) |> select(divide_id, flowpath_id), by = "divide_id")
 
-
+  stopifnot(
+    hydrofab:::network_is_dag(ngen_network_list$flowpaths, "flowpath_id", "flowpath_toid")
+  )
 
   if(!is.null(flowline_gpkg)){
     cli::cli_alert_success("\n--- Flowline topology provided ---\n")
 
     fl_network_list <- read_hydrofabric(flowline_gpkg)
 
-    ngen_network_list$flowlines <- select(st_drop_geometry(ngen_network_list$flowpaths), flowpath_id, flowpath_toid, flowline_id, areasqkm) |>
+    stopifnot(
+      hydrofab:::network_is_dag(fl_network_list$flowpaths, "flowpath_id", "flowpath_toid")
+    )
+
+
+    ngen_network_list$flowlines = select(st_drop_geometry(ngen_network_list$flowpaths), flowpath_id, flowpath_toid, flowline_id, areasqkm) |>
       tidyr::separate_longer_delim(cols = 'flowline_id', delim = ",") |>
       mutate(flowline_id = as.integer(flowline_id)) |>
       left_join(select(st_drop_geometry(fl_network_list$flowpaths),
@@ -212,12 +220,16 @@ build_nextgen = function(flowpath_gpkg,
         st_drop_geometry() |>
         dplyr::right_join(net, by = "flowline_id", relationship = "many-to-many")
 
-      net <- sf::read_sf(flowline_gpkg, 'hydrolocations') |>
+    if(hfutils::layer_exists(flowline_gpkg, "hydrolocations")){
+
+      hl <- sf::read_sf(flowline_gpkg, 'hydrolocations') |>
         select(any_of(c('poi_id', 'hl_reference', 'hl_class', 'hl_source', 'hl_uri'))) |>
         distinct() |>
-        st_drop_geometry() |>
-        mutate(poi_id = as.character(poi_id)) |>
-        dplyr::right_join(net, by = "poi_id", relationship = "many-to-many")
+        mutate(poi_id = as.character(poi_id))
+
+      net <- dplyr::right_join(st_drop_geometry(hl), net, by = "poi_id", relationship = "many-to-many")
+
+      ngen_network_list$hydrolocations <- hl
     }
 
     ngen_network_list$network = select(net,
@@ -233,12 +245,16 @@ build_nextgen = function(flowpath_gpkg,
            dplyr::everything()
            ) |>
       distinct()
+    }
 
     if(!is.null(outfile)){
       write_hydrofabric(ngen_network_list, outfile = outfile, enforce_dm = FALSE)
+      if("hl" %in% names(ngen_network_list)){
+        cli::cli_alert_success("Adding hydrolocations written to {.file {outfile}}")
+        write_sf(ngen_network_list$hydrolocations, outfile, layer = "hydrolocations")
+      }
     } else {
       return(invisible(ngen_network_list))
     }
-
 
 }
